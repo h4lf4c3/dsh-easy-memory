@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "简易记忆",
+    "description": "给 Agent 装上长期记忆：DSH_HOME 下一份跨工作区的用户全局记忆，每个工作区根目录 .dshmem/ 下一份项目记忆；记忆会注入系统提示词，并可通过 memory_* 工具与 /memory 命令维护。"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "dsh-easy-memory",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Long-term memory for DeepSeek Harness: a global user memory editable from a Settings page, a per-workspace .dshmem/ project memory refreshed after every turn, day/size based shard archiving, and cross-workspace promotion to global memory.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "README.en.md",
+    "DEVELOPMENT.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "memory",
+    "agent-memory",
+    "long-term-memory"
+  ],
+  "license": "MIT"
+}

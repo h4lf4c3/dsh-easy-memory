@@ -1,0 +1,16 @@
+# 运行期记忆数据：属于使用者自己的隐私内容，不要提交
+.dshmem/
+
+# 编辑器与系统噪声
+.DS_Store
+Thumbs.db
+*.swp
+
+# 依赖与构建产物
+node_modules/
+*.tgz
+*.log
+
+# 测试与临时目录
+.tmp/
+coverage/

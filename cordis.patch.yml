@@ -1,0 +1,52 @@
+# dsh-easy-memory 随包分发的 profile patch。
+#
+# 包的 package.json 通过 dsh.bundle.patch 指向本文件；用 plugin_manager 的
+# install_bundle 安装本目录后，这一层 patch 会被自动应用，无需手工编辑 profile
+# 的 cordis.patch.yml。
+#
+# 手工兜底（不使用 install_bundle 时，把 insert 段复制进 profile 的
+# cordis.patch.yml，再把本包加入 profile 的 dsh.profile.bundles）：
+#   - insert:
+#       - id: dsh-easy-memory
+#         name: dsh-easy-memory
+#
+# 下列 config 全部可省略；省略时使用 index.js 里的默认值。
+- insert:
+    - id: dsh-easy-memory
+      name: dsh-easy-memory
+      config:
+        # --- 基本 ---
+        enabled: true                 # 总开关；设置页与 /memory off 再叠加运行期开关
+        scope: both                   # 注入范围：both / global / workspace
+        globalDir: ''                 # 空表示 <DSH_HOME>/easy-memory
+        workspaceDirName: .dshmem     # 工作区记忆目录名
+        sectionOrder: 500             # system-prompt section 排序值
+        refreshMs: 15000              # 重新读盘与检查跨天归档的间隔（毫秒）
+
+        # --- 注入上限 ---
+        maxEntriesInPrompt: 40        # 每个作用域最多注入多少条
+        maxInjectChars: 4000          # 注入文本总字符上限
+        maxTextChars: 500             # 单条记忆在提示词里的字符上限
+
+        # --- 对话摘要 ---
+        journal: true                 # 是否写 <workspace>/.dshmem/journal/<日期>.md
+        journalMaxChars: 1200         # journal 里每条消息的截断长度
+
+        # --- 分片归档：跨天、超条数、超字节都会触发 ---
+        shardMaxEntries: 200          # 活动区超过这么多条就归档
+        shardMaxBytes: 131072         # 活动区序列化后超过这么多字节就归档
+        keepActiveEntries: 50         # 归档时主索引保留最近多少条
+        searchShards: 10              # 检索最多读多少个最近的分片
+
+        # --- 每轮对话后自动沉淀 ---
+        autoDistill: workspace        # workspace / global / both / off
+        distillMinChars: 200          # 该轮对话短于此长度就跳过
+        distillMaxInputChars: 12000   # 送给模型的对话文本上限
+        distillMaxEntries: 8          # 单轮最多沉淀多少条
+        distillTimeoutMs: 60000       # 单次沉淀的超时
+
+        # --- 全局晋升：同一文本在多个工作区重复出现就升级为用户全局记忆 ---
+        promoteEnabled: true          # 关掉就只保留手动 /memory promote
+        promoteAfterWorkspaces: 2     # 在几个不同工作区出现过才晋升
+        promoteMode: move             # move 搬进全局并从项目记忆移除；copy 两边各留一份
+        promotionLedgerMax: 2000      # 账本最多保留多少条候选，超出按「已晋升优先、其次最近」裁剪

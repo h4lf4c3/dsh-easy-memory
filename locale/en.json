@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Easy Memory",
+    "description": "Long-term memory for the agent: one global user memory under DSH_HOME and one project memory under .dshmem/ in each workspace root, injected into the system prompt and maintained through memory_* tools and the /memory command."
+  }
+}
