@@ -114,7 +114,7 @@ plugin_manager(action: "remove_bundle", target: "dsh-easy-memory")
 3. **写一条。** 输入 `/memory add --kind preference 我习惯用 pnpm 而不是 npm`，应当返回"已记录到 …/.dshmem"。
 4. **验自动。** 新开一轮，问 Agent"我习惯用什么包管理器？"。它应当先调 `memory_search` 再回答。
 5. **看侧栏。** 主页左侧应当多出「记忆」一行，位置在 Skill/MCP 与自动化任务之间；点开是独立的整页记忆面板。
-
+![](assets/setting.png)
 ---
 
 ## 使用
