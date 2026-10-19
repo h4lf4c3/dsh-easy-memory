@@ -28,7 +28,7 @@
 
 Agent 每次开新会话都从零开始，你反复告诉它同样的事：用 pnpm 不用 npm、提交信息写中文、这个项目统一两空格缩进。`dsh-easy-memory` 把这些话沉淀成结构化记忆，并在之后的每一次请求里自动带上。
 
-四类抽取范围（事实信息 / 偏好习惯 / 人物关系 / 跟进事项）、注入系统提示词、设置页里可视化查看与增删改、一键开关、从其他 AI 导入、分片归档与跨工作区晋升。
+四类抽取范围（事实信息 / 偏好习惯 / 人物关系 / 跟进事项）、注入系统提示词、主页侧栏「记忆」面板里可视化查看与增删改、一键开关、从其他 AI 导入、分片归档与跨工作区晋升。
 
 整个插件**只依赖 Node 内置模块**，不导入任何 `@deepseek-ai/*` 包，因此不会因为宿主目录的模块解析策略变化而失效。
 
@@ -42,8 +42,8 @@ Agent 每次开新会话都从零开始，你反复告诉它同样的事：用 p
 | 自动沉淀 | 每一轮对话结束后，用会话自己的模型抽取值得长期保留的信息，写进项目记忆 |
 | 分片归档 | 活动区跨天或超出容量上限时，旧条目自动切进 `shards/`，主索引常驻、分片按需召回 |
 | 全局晋升 | 同一条记忆在多个不同工作区重复出现时，自动升级为用户全局记忆 |
-| 可视化设置页 | 设置 → 记忆：开关、按分类添加、就地改写、删除、查看归档与晋升统计 |
-| 两套接口 | 模型用 `memory_*` 四个工具，人用 `/memory` 斜杠命令或设置页 |
+| 可视化面板 | 主页侧栏「记忆」：开关、按分类添加、就地改写、删除、查看归档与晋升统计 |
+| 两套接口 | 模型用 `memory_*` 四个工具，人用 `/memory` 斜杠命令或侧栏记忆面板 |
 | 对话留痕 | 每轮对话摘要追加到 `.dshmem/journal/<日期>.md`，作为原始素材 |
 | 数据可读 | 权威数据是 JSON，同时生成人类可读的 `memory.md` 视图 |
 | 零依赖 | 只用 `node:fs` / `node:path` / `node:crypto` / `node:os` |
@@ -109,13 +109,11 @@ plugin_manager(action: "remove_bundle", target: "dsh-easy-memory")
 
 装好并重启之后：
 
-1. **看状态。** 输入 `/memory path`，应当打印出全局目录、项目目录、状态文件与设置页入口。
+1. **看状态。** 输入 `/memory path`，应当打印出全局目录、项目目录、状态文件与记忆面板入口。
 2. **看注入。** 让 Agent 做任意一件事，它这一轮的系统提示词里应当出现 `## Long-term memory (dsh-easy-memory)` 段落。
 3. **写一条。** 输入 `/memory add --kind preference 我习惯用 pnpm 而不是 npm`，应当返回"已记录到 …/.dshmem"。
 4. **验自动。** 新开一轮，问 Agent"我习惯用什么包管理器？"。它应当先调 `memory_search` 再回答。
-5. **看设置页。** 打开设置，左侧应当多出「记忆」。
-
-![](assets/setting.png)
+5. **看侧栏。** 主页左侧应当多出「记忆」一行，位置在 Skill/MCP 与自动化任务之间；点开是独立的整页记忆面板。
 
 ---
 
@@ -159,16 +157,17 @@ plugin_manager(action: "remove_bundle", target: "dsh-easy-memory")
 | `/memory path` | 显示各存储目录 |
 | `/memory help` | 帮助 |
 
-### 设置页
+### 记忆面板
 
-设置 → **记忆**，提供：
+主页侧栏 → **记忆**（在 Skill/MCP 与自动化任务之间），提供：
 
 - 记忆总开关（写入 `state.json`，与 `/memory off` 同一个开关）；
-- 分类下拉 + 输入框 + 添加；
-- 每条记忆的**改写**与**删除**；
-- 底部信息：全局目录、活动区日期、归档分片数、自动沉淀模式、注入范围、晋升统计。
+- 顶部四格概况：全局条数、归档分片数、自动沉淀模式、注入范围；
+- 「添加记忆」按钮弹出大输入框：分类 + 多行内容，`Ctrl + Enter` 保存、`Esc` 取消；
+- 每条记忆的**改写**与**删除**（改写走同一个弹窗；删除需点两次确认）；
+- 底部信息：全局目录、活动区日期、晋升统计。
 
-这一页只管理**全局记忆**：设置页是 root 作用域、拿不到具体会话，所以它不知道你在哪个工作区。项目记忆请用 `/memory` 或 `memory_*` 工具。
+这一页只管理**全局记忆**：面板是 root 作用域、拿不到具体会话，所以它不知道你在哪个工作区。项目记忆请用 `/memory` 或 `memory_*` 工具。
 
 数据通路是插件自己注册的同源 HTTP 路由，挂在 `/dsh-easy-memory/*` 下：`summary`、`toggle`、`add`、`update`、`delete`。
 
@@ -308,32 +307,43 @@ plugin_manager(action: "remove_bundle", target: "dsh-easy-memory")
 
 ## 开发与测试
 
-插件是纯 ESM 的单个 Host 文件加单个 Client 文件，没有构建步骤。改完 `index.js` 或 `client.js` 之后重启 Harness 即可生效（profile 记录的是目录链接）。
+Host 半是纯 ESM，按职责拆在 `lib/` 下，没有构建步骤；Client 半仍然是单个手写文件
+`client.js`（浏览器侧每个插件只能加载一个文件）。改完 Host 或 Client 文件后重启
+Harness 即可生效（profile 记录的是目录链接）；Client 侧在页面刷新后生效。
+
+```bash
+npm run check   # 语法检查
+npm test        # 两个冒烟测试：Host 装配 + Client bundle 接线
+```
 
 ```
-index.js             Host 半：section、四个工具、/memory、HTTP 后端、存储与晋升
-client.js            Client 半：设置页「记忆」
+index.js             Host 入口：配置、section、事件接线与注册
+lib/constants.js     常量、枚举与默认配置
+lib/util.js          日志、文本、原子读写、串行锁
+lib/config.js        配置归一化
+lib/store.js         主索引 + 分片 + 归档
+lib/search.js        主索引与分片检索
+lib/prompt.js        系统提示词渲染
+lib/entry.js         条目视图与参数校验
+lib/promotion.js     跨工作区晋升账本
+lib/tools.js         memory_* 四个工具
+lib/commands.js      /memory 命令
+lib/turn.js          journal 与自动沉淀
+lib/http.js          记忆面板 HTTP 接口
+client.js            Client 半：侧栏「记忆」入口与整页面板（单文件，无构建）
+tests/*.mjs          两个冒烟测试
 cordis.patch.yml     随包分发的 profile patch（带全部配置项注释）
 package.json         bundle 清单
 locale/*.json        插件管理器里的标题与描述
 icon.svg             自绘图标
-DEVELOPMENT.md       设计与验证记录：机制取舍、实测事故、逐项测试清单
 ```
 
-语法自查：
-
-```bash
-node --check index.js
-node --check client.js
-```
-
-测试方式（无需 Harness）：把 `index.js` 复制成 `.mjs`，补充导出内部函数，或者用一个假的 `ctx` 调用 `apply()`，直接驱动注册出来的工具与命令。`DEVELOPMENT.md` 记录了完整的测试清单与验证状态。
-
-> 注意：`index.js` 的写入走 `node:fs`，所以任何测试都必须传入临时的 `globalDir` 与临时工作区，否则会写到真实的记忆目录里。
+> 注意：存储层的写入走 `node:fs`，所以任何测试都必须传入临时的 `globalDir` 与
+> 临时工作区，否则会写到真实的记忆目录里（`tests/apply-smoke.mjs` 就是这么做的）。
 
 ---
 
 ## 兼容性
 
-- 开发与验证基于 **DeepSeek Harness 0.2.1。
-- Host 半依赖 `tools`、`systemPrompt`、`commands`、`workingDirectory` 四个服务存在；`webServer` 与 `llm` 是可选获取，缺失时只是少掉设置页或自动沉淀，其余功能不受影响。
+- 开发与验证基于 **DeepSeek Harness 0.2.1**。
+- Host 半依赖 `tools`、`systemPrompt`、`commands`、`workingDirectory` 四个服务存在；`webServer` 与 `llm` 是可选获取，缺失时只是少掉记忆面板或自动沉淀，其余功能不受影响。

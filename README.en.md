@@ -26,7 +26,7 @@
 
 Every new agent session starts from zero, so you keep repeating yourself: use pnpm not npm, write commit messages in Chinese, this project uses two-space indentation. `dsh-easy-memory` turns those statements into structured memories and carries them into every later request.
 
-Four extraction categories (facts / preferences / relationships / follow-ups), injection into the system prompt, a visual Settings page for viewing and editing, a one-click switch, importing memory from other AI tools, plus shard archiving and cross-workspace promotion.
+Four extraction categories (facts / preferences / relationships / follow-ups), injection into the system prompt, a visual **Memory** panel in the home sidebar for viewing and editing, a one-click switch, importing memory from other AI tools, plus shard archiving and cross-workspace promotion.
 
 The plugin **depends only on Node built-ins** and imports no `@deepseek-ai/*` package, so it does not break when the host installation changes how it resolves modules.
 
@@ -40,8 +40,8 @@ The plugin **depends only on Node built-ins** and imports no `@deepseek-ai/*` pa
 | Automatic distillation | After each turn, the session's own model extracts what is worth keeping and writes it into project memory |
 | Shard archiving | When the active area crosses a day boundary or a size limit, old entries move into `shards/`; the index stays resident and shards are recalled on demand |
 | Global promotion | When the same memory appears in more than one workspace, it is promoted to global user memory |
-| Settings page | Settings → Memory: switch, add by category, edit in place, delete, view archive and promotion stats |
-| Two interfaces | Four `memory_*` tools for the model; `/memory` and the Settings page for you |
+| Visual panel | Home sidebar → Memory: switch, add by category, edit in place, delete, view archive and promotion stats |
+| Two interfaces | Four `memory_*` tools for the model; `/memory` and the sidebar Memory panel for you |
 | Conversation trail | Each turn's digest is appended to `.dshmem/journal/<date>.md` as raw material |
 | Readable data | JSON is authoritative, and a human-readable `memory.md` view is regenerated alongside it |
 | Zero dependencies | Only `node:fs`, `node:path`, `node:crypto` and `node:os` |
@@ -107,11 +107,11 @@ Memory data is not deleted: `<DSH_HOME>/easy-memory/` and each workspace's `.dsh
 
 After installing and restarting:
 
-1. **Check the paths.** Run `/memory path`; it should print the global directory, the project directory, the state file and the Settings entry point.
+1. **Check the paths.** Run `/memory path`; it should print the global directory, the project directory, the state file and the Memory panel entry point.
 2. **Check injection.** Ask the agent to do anything; that turn's system prompt should contain a `## Long-term memory (dsh-easy-memory)` block.
 3. **Write one entry.** Run `/memory add --kind preference I prefer pnpm over npm`; it should answer that it recorded the entry into `…/.dshmem`.
 4. **Check the automatic path.** Start a new turn and ask the agent "which package manager do I prefer?". It should call `memory_search` before answering.
-5. **Check the Settings page.** Open Settings; a **Memory** page should appear in the sidebar.
+5. **Check the sidebar.** The home sidebar should gain a **Memory** row between Skill/MCP and Automation tasks; clicking it opens the full-page Memory panel.
 
 ---
 
@@ -155,16 +155,17 @@ You do not have to do anything for these four things:
 | `/memory path` | Show the storage directories |
 | `/memory help` | Help |
 
-### Settings page
+### Memory panel
 
-Settings → **Memory** provides:
+Home sidebar → **Memory** (between Skill/MCP and Automation tasks) provides:
 
 - the master switch (written to `state.json`, the same switch as `/memory off`);
-- a category dropdown, a text field and an add button;
-- **edit** and **delete** on every entry;
-- a footer with the global directory, active date, shard count, distillation mode, injection scope and promotion stats.
+- a four-cell overview: global entries, archived shards, distillation mode, injection scope;
+- an **Add memory** button that opens a large editor: kind plus a multi-line text area, `Ctrl + Enter` to save and `Esc` to cancel;
+- **edit** and **delete** on every entry (edit reuses the same dialog; delete asks for a second click);
+- a footer with the global directory, active date and promotion stats.
 
-This page manages the **global memory only**: the Settings page is root-scoped and has no session, so it cannot know which workspace you are in. Use `/memory` or the `memory_*` tools for project memory.
+This page manages the **global memory only**: the panel is root-scoped and has no session, so it cannot know which workspace you are in. Use `/memory` or the `memory_*` tools for project memory.
 
 The data path is a set of same-origin HTTP routes the plugin registers itself, under `/dsh-easy-memory/*`: `summary`, `toggle`, `add`, `update`, `delete`.
 
@@ -306,32 +307,45 @@ Yes, but avoid both injecting the same kind of content into the system prompt. T
 
 ## Development and testing
 
-The plugin is one plain-ESM Host file and one Client file with no build step. After editing `index.js` or `client.js`, restart the Harness (the profile records a directory link).
+The Host half is plain ESM split by responsibility under `lib/`, with no build step.
+The Client half stays one hand-written file, `client.js` (a browser loads exactly one
+file per plugin). Editing either half takes effect after restarting the Harness (the
+profile holds a directory link); the Client half takes effect after a page refresh.
+
+```bash
+npm run check   # syntax checks
+npm test        # two smoke tests: Host wiring + Client bundle wiring
+```
 
 ```
-index.js             Host half: section, four tools, /memory, HTTP backend, storage and promotion
-client.js            Client half: the Settings "Memory" page
+index.js             Host entry: config, sections, event wiring, registrations
+lib/constants.js     constants, enums, defaults
+lib/util.js          logging, text, atomic writes, serial locks
+lib/config.js        config normalization
+lib/store.js         main index + shards + archiving
+lib/search.js        main-index and shard search
+lib/prompt.js        system-prompt rendering
+lib/entry.js         entry views and argument validation
+lib/promotion.js     cross-workspace promotion ledger
+lib/tools.js         the four memory_* tools
+lib/commands.js      the /memory command
+lib/turn.js          journal and auto-distillation
+lib/http.js          Memory panel HTTP routes
+client.js            Client half: home sidebar Memory entry and its full-page panel (one file, no build)
+tests/*.mjs          the two smoke tests
 cordis.patch.yml     the shipped profile patch (every config key commented)
 package.json         bundle manifest
 locale/*.json        title and description for the plugin manager
 icon.svg             original icon
-DEVELOPMENT.md       design and verification record: trade-offs, incidents, per-item test list
 ```
 
-Syntax check:
-
-```bash
-node --check index.js
-node --check client.js
-```
-
-Testing without the Harness: copy `index.js` to an `.mjs` file and export the internals, or mount the plugin on a fake `ctx` by calling `apply()` and then driving the registered tools and commands directly. `DEVELOPMENT.md` records the full test list and verification status.
-
-> Note: `index.js` writes through `node:fs`, so any test must pass a temporary `globalDir` and temporary workspaces, or it will write into your real memory directories.
+> Note: storage writes go through `node:fs`, so any test must pass a temporary
+> `globalDir` and temporary workspace, or it will write into your real memory
+> directories (`tests/apply-smoke.mjs` does exactly that).
 
 ---
 
 ## Compatibility
 
 - Developed and verified against **DeepSeek Harness 0.2.1**.
-- The Host half requires the `tools`, `systemPrompt`, `commands` and `workingDirectory` services to exist; `webServer` and `llm` are acquired optionally, and their absence only removes the Settings page or distillation while everything else keeps working.
+- The Host half requires the `tools`, `systemPrompt`, `commands` and `workingDirectory` services to exist; `webServer` and `llm` are acquired optionally, and their absence only removes the Memory panel or distillation while everything else keeps working.

@@ -1,8 +1,8 @@
 {
   "name": "dsh-easy-memory",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
-  "description": "Long-term memory for DeepSeek Harness: a global user memory editable from a Settings page, a per-workspace .dshmem/ project memory refreshed after every turn, day/size based shard archiving, and cross-workspace promotion to global memory.",
+  "description": "Long-term memory for DeepSeek Harness: a global user memory editable from a Memory panel in the home sidebar, a per-workspace .dshmem/ project memory refreshed after every turn, day/size based shard archiving, and cross-workspace promotion to global memory.",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -13,22 +13,33 @@
   },
   "files": [
     "index.js",
+    "lib",
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
     "README.md",
-    "README.en.md",
-    "DEVELOPMENT.md",
-    "LICENSE"
+    "README.en.md"
   ],
+  "scripts": {
+    "check": "node --check index.js && node --check client.js",
+    "test": "node tests/apply-smoke.mjs && node tests/client-bundle-smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
     "client": {
       "platform": "web",
-      "immediately": true
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
     }
   },
   "keywords": [
